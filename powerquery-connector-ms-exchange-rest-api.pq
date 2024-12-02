@@ -8,7 +8,7 @@
     Additionally, it defines helper functions for making API requests and processing JSON responses. 
     The connector is designed to be used within Power BI or other Power Query environments, providing a user-friendly interface and navigation table for accessing the data.
 */
-[Version = "1.0.0"]
+[Version = "1.1.0"]
 section MSGRAPHEXCHANGEONLINE;
 // Pull Client ID from Source File
 client_id = Text.FromBinary(Extension.Contents("client_id.user")); 
@@ -226,10 +226,30 @@ ListUsersDirectMembershipsType = type function (
 
 ListUsersDirectMemberships = () =>
     let 
-        result = GetJSON("/me/memberOf")             
-    in
-        result;
-
+        // Define internal function to call data recursively
+        GetData = (url as text, accumulator as list) =>
+            let
+                // Fetch the response from the URL
+                response = GetJSON(url),
+                // Parse the JSON response
+                jsonResponse = Json.Document(response),
+                // Extract the current set of data
+                currentData = jsonResponse[value],
+                // Check if there's a next link
+                nextLink = try jsonResponse[#"@odata.nextLink"] otherwise null,
+                // Get relative path
+                relNextLink = Text.Range(nextLink,Text.Length("https://graph.microsoft.com/v1.0/")),
+                // Accumulate data and call recursively if there's a next link
+                result = if relNextLink <> null then
+                    @GetData(relNextLink, List.Combine({accumulator,currentData}))
+                else
+                    List.Combine({accumulator,currentData})
+            in
+                result,
+        // Initial Call        
+        allData = GetData("me/memberOf",{})
+        in
+            allData;
 
 /**** Help Functions ****/
 GetJSON = (optional relPath as text, optional additionalHeaders as record) =>
@@ -246,6 +266,8 @@ GetJSON = (optional relPath as text, optional additionalHeaders as record) =>
         result = Text.FromBinary(webSource)
     in
         result;
+
+        
 /**** End Helper Functions ****/
 
 
