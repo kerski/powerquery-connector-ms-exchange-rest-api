@@ -56,9 +56,9 @@ shared MyExtension.UnitTest =
             true,
             Value.Is(ListUsersDirectMemberships,Function.Type)
         ),
-        Fact("ListUsersDirectMemberships Should Return Correct Metadata",
-            "directoryObjects",
-            Text.AfterDelimiter(Json.Document(ListUsersDirectMemberships())[#"@odata.context"],"#")
+        Fact("ListUsersDirectMemberships Should Return a List",
+            true,
+            List.Count(ListUsersDirectMemberships()) > 0
         )        
     },
     results = Table.ReverseRows(Table.FromRecords(facts)),
